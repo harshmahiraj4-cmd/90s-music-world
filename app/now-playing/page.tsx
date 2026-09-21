@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useMusicStore } from '@/lib/musicStore';
-import { useAudioEngine } from '@/lib/audioEngine';
+import { seekAudio } from '@/lib/audioEngine';
 import VinylDisc from '@/components/player/VinylDisc';
 import CassetteDeck from '@/components/player/CassetteDeck';
 import AudioVisualizer from '@/components/player/AudioVisualizer';
@@ -19,8 +19,6 @@ export default function NowPlayingScreen() {
     deckMode,
     toggleDeckMode,
   } = useMusicStore();
-
-  const { handleSeek } = useAudioEngine();
 
   if (!currentSong) {
     return (
@@ -171,7 +169,7 @@ export default function NowPlayingScreen() {
 
           {/* Progress bar */}
           <div className="w-full px-2 mb-2">
-            <ProgressBar onSeek={handleSeek} />
+            <ProgressBar onSeek={seekAudio} />
           </div>
 
           {/* Transport controls */}

@@ -7,21 +7,29 @@ let audioCtx: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let sourceNode: MediaElementAudioSourceNode | null = null;
 let audioEl: HTMLAudioElement | null = null;
+let isSeeking = false;
+let listenersAttached = false;
 
-function getAudioContext(): AudioContext {
+export function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
   if (!audioCtx) {
-    audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const AudioCtxClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (AudioCtxClass) {
+      audioCtx = new AudioCtxClass();
+    }
   }
   return audioCtx;
 }
 
-export function getOrCreateAudioElement(): HTMLAudioElement {
-  if (!audioEl && typeof window !== 'undefined') {
+export function getOrCreateAudioElement(): HTMLAudioElement | null {
+  if (typeof window === 'undefined') return null;
+  if (!audioEl) {
     audioEl = new Audio();
-    audioEl.crossOrigin = 'anonymous';
     audioEl.preload = 'metadata';
   }
-  return audioEl!;
+  return audioEl;
 }
 
 export function getAnalyser(): AnalyserNode | null {
@@ -29,14 +37,37 @@ export function getAnalyser(): AnalyserNode | null {
 }
 
 export function initAudioEngine(el: HTMLAudioElement) {
-  if (sourceNode) return; // Already initialized
-  const ctx = getAudioContext();
-  sourceNode = ctx.createMediaElementSource(el);
-  analyser = ctx.createAnalyser();
-  analyser.fftSize = 256;
-  analyser.smoothingTimeConstant = 0.8;
-  sourceNode.connect(analyser);
-  analyser.connect(ctx.destination);
+  if (sourceNode || typeof window === 'undefined') return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    sourceNode = ctx.createMediaElementSource(el);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.8;
+    sourceNode.connect(analyser);
+    analyser.connect(ctx.destination);
+  } catch (err) {
+    // If Web Audio routing is restricted or fails (e.g. CORS on audio element),
+    // let HTML5 audio play directly to output rather than failing silently
+    console.warn('AudioAnalyser init skipped, falling back to direct audio output:', err);
+  }
+}
+
+export function seekAudio(progress: number) {
+  const el = getOrCreateAudioElement();
+  if (!el) return;
+  const duration = el.duration || useMusicStore.getState().duration || 0;
+  if (duration && !isNaN(duration)) {
+    isSeeking = true;
+    el.currentTime = progress * duration;
+    useMusicStore.getState().seekTo(progress);
+    setTimeout(() => {
+      isSeeking = false;
+    }, 150);
+  } else {
+    useMusicStore.getState().seekTo(progress);
+  }
 }
 
 export function useAudioEngine() {
@@ -46,122 +77,197 @@ export function useAudioEngine() {
     volume,
     isMuted,
     repeatMode,
-    seekTo,
     setProgress,
     setDuration,
     setIsPlaying,
     next,
   } = useMusicStore();
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isSeeking = useRef(false);
+  const currentSongRef = useRef(currentSong);
+  currentSongRef.current = currentSong;
 
-  // Initialize audio element once
+  const repeatModeRef = useRef(repeatMode);
+  repeatModeRef.current = repeatMode;
+
+  // Initialize HTML5 Audio Element and its Event Listeners once
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const el = getOrCreateAudioElement();
-    audioRef.current = el;
+    if (!el) return;
 
-    const handleTimeUpdate = () => {
-      if (!isSeeking.current && el.duration) {
-        setProgress(el.currentTime / el.duration, el.currentTime);
-      }
-    };
-    const handleDurationChange = () => {
-      if (el.duration && !isNaN(el.duration)) {
-        setDuration(el.duration);
-      }
-    };
-    const handleEnded = () => {
-      if (repeatMode === 'one') {
-        el.currentTime = 0;
-        el.play().catch(() => {});
-      } else {
-        next();
-      }
-    };
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
+    if (!listenersAttached) {
+      listenersAttached = true;
 
-    el.addEventListener('timeupdate', handleTimeUpdate);
-    el.addEventListener('durationchange', handleDurationChange);
-    el.addEventListener('ended', handleEnded);
-    el.addEventListener('play', handlePlay);
-    el.addEventListener('pause', handlePause);
+      // 1. loadedmetadata
+      const handleLoadedMetadata = () => {
+        if (el.duration && !isNaN(el.duration)) {
+          setDuration(el.duration);
+        }
+      };
 
-    return () => {
-      el.removeEventListener('timeupdate', handleTimeUpdate);
-      el.removeEventListener('durationchange', handleDurationChange);
-      el.removeEventListener('ended', handleEnded);
-      el.removeEventListener('play', handlePlay);
-      el.removeEventListener('pause', handlePause);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repeatMode]);
+      // 2. canplay
+      const handleCanPlay = () => {
+        const state = useMusicStore.getState();
+        if (state.isPlaying && el.paused) {
+          el.play().catch((err: DOMException) => {
+            if (err.name !== 'AbortError') {
+              console.error(
+                `AUDIO LOAD ERROR\nSong Title: ${currentSongRef.current?.title || 'Unknown'}\nAudio URL: ${el.src}\nBrowser Error: ${err.name} - ${err.message}`
+              );
+              setIsPlaying(false);
+            }
+          });
+        }
+      };
 
-  // Load new song when currentSong changes
+      // 3. play
+      const handlePlay = () => {
+        setIsPlaying(true);
+      };
+
+      // 4. pause
+      const handlePause = () => {
+        setIsPlaying(false);
+      };
+
+      // 5. ended
+      const handleEnded = () => {
+        if (repeatModeRef.current === 'one') {
+          el.currentTime = 0;
+          el.play().catch(() => {});
+        } else {
+          next();
+        }
+      };
+
+      // 6. error
+      const handleError = () => {
+        const song = currentSongRef.current;
+        const err = el.error;
+        let errorCode = 0;
+        let errorName = 'UNKNOWN_ERROR';
+
+        if (err) {
+          errorCode = err.code;
+          switch (err.code) {
+            case MediaError.MEDIA_ERR_ABORTED:
+              errorName = 'MEDIA_ERR_ABORTED (User aborted audio playback)';
+              break;
+            case MediaError.MEDIA_ERR_NETWORK:
+              errorName = 'MEDIA_ERR_NETWORK (Network error downloading audio)';
+              break;
+            case MediaError.MEDIA_ERR_DECODE:
+              errorName = 'MEDIA_ERR_DECODE (Failed decoding audio track)';
+              break;
+            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              errorName = 'MEDIA_ERR_SRC_NOT_SUPPORTED (404 Not Found or unsupported audio format)';
+              break;
+            default:
+              errorName = `Code ${err.code}: ${err.message || 'Unknown error'}`;
+          }
+        }
+
+        console.error(
+          `AUDIO LOAD ERROR\nSong Title: ${song?.title || 'Unknown'}\nAudio URL: ${el.src || song?.audioSrc}\nBrowser Error/Code: [${errorCode}] ${errorName}`
+        );
+
+        setIsPlaying(false);
+      };
+
+      // 7. timeupdate
+      const handleTimeUpdate = () => {
+        if (!isSeeking && el.duration && !isNaN(el.duration)) {
+          setProgress(el.currentTime / el.duration, el.currentTime);
+        }
+      };
+
+      el.addEventListener('loadedmetadata', handleLoadedMetadata);
+      el.addEventListener('canplay', handleCanPlay);
+      el.addEventListener('play', handlePlay);
+      el.addEventListener('pause', handlePause);
+      el.addEventListener('ended', handleEnded);
+      el.addEventListener('error', handleError);
+      el.addEventListener('timeupdate', handleTimeUpdate);
+    }
+  }, [setDuration, setIsPlaying, setProgress, next]);
+
+  // Handle song source changes
   useEffect(() => {
-    const el = audioRef.current;
+    const el = getOrCreateAudioElement();
     if (!el || !currentSong) return;
 
-    const src = currentSong.audioSrc;
-    if (el.src !== window.location.origin + src && el.src !== src) {
-      el.src = src;
-      el.load();
-    }
+    const rawSrc = currentSong.audioSrc;
+    // Normalize path to absolute URL for accurate comparison
+    const resolvedSrc = new URL(rawSrc, window.location.href).href;
 
-    // Initialize Web Audio API engine
-    try {
+    if (el.src !== resolvedSrc) {
+      el.src = rawSrc;
+      el.load();
+
+      // Initialize Web Audio API node on first play
       initAudioEngine(el);
       const ctx = getAudioContext();
-      if (ctx.state === 'suspended') {
+      if (ctx && ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }
-    } catch {
-      // Safari or restricted environment
-    }
-  }, [currentSong]);
 
-  // Play / pause
+      if (isPlaying) {
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err: DOMException) => {
+            if (err.name !== 'AbortError') {
+              console.error(
+                `AUDIO LOAD ERROR\nSong Title: ${currentSong.title}\nAudio URL: ${el.src}\nBrowser Error: ${err.name} - ${err.message}`
+              );
+              setIsPlaying(false);
+            }
+          });
+        }
+      }
+    }
+  }, [currentSong, isPlaying, setIsPlaying]);
+
+  // Handle Play / Pause commands
   useEffect(() => {
-    const el = audioRef.current;
+    const el = getOrCreateAudioElement();
     if (!el || !currentSong) return;
 
     if (isPlaying) {
       const ctx = getAudioContext();
-      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-      el.play().catch((err) => {
-        // File not found - show graceful error, don't crash
-        if (err.name === 'NotSupportedError' || err.name === 'NotAllowedError') {
-          setIsPlaying(false);
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      if (el.paused) {
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err: DOMException) => {
+            if (err.name !== 'AbortError') {
+              console.error(
+                `AUDIO LOAD ERROR\nSong Title: ${currentSong.title}\nAudio URL: ${el.src}\nBrowser Error: ${err.name} - ${err.message}`
+              );
+              setIsPlaying(false);
+            }
+          });
         }
-      });
+      }
     } else {
-      el.pause();
+      if (!el.paused) {
+        el.pause();
+      }
     }
   }, [isPlaying, currentSong, setIsPlaying]);
 
-  // Volume
+  // Handle Volume & Mute
   useEffect(() => {
-    const el = audioRef.current;
+    const el = getOrCreateAudioElement();
     if (!el) return;
-    el.volume = isMuted ? 0 : volume;
+    el.volume = isMuted ? 0 : Math.max(0, Math.min(1, volume));
   }, [volume, isMuted]);
 
-  // Seek
-  const handleSeek = useCallback(
-    (progress: number) => {
-      const el = audioRef.current;
-      if (!el || !el.duration) return;
-      isSeeking.current = true;
-      el.currentTime = progress * el.duration;
-      seekTo(progress);
-      setTimeout(() => {
-        isSeeking.current = false;
-      }, 100);
-    },
-    [seekTo]
-  );
+  const handleSeek = useCallback((progress: number) => {
+    seekAudio(progress);
+  }, []);
 
-  return { handleSeek, audioRef };
+  return { handleSeek };
 }
