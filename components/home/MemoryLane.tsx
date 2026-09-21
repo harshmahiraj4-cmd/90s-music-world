@@ -22,7 +22,7 @@ export default function MemoryLane() {
         <span className="material-symbols-outlined text-tertiary text-[20px]">auto_stories</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mt-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
         {MEMORY_LANE.map((ep) => (
           <div
             key={ep.id}

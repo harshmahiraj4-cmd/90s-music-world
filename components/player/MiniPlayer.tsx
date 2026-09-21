@@ -22,9 +22,9 @@ export default function MiniPlayer() {
   if (!currentSong) return null;
 
   return (
-    <div className="fixed bottom-16 left-0 right-0 z-30 px-3 pb-1">
+    <div className="fixed bottom-16 md:bottom-4 left-0 right-0 z-30 px-3 pb-1">
       <div
-        className="max-w-lg mx-auto rounded-2xl bg-surface-container-high/95 backdrop-blur-xl shadow-[0_-4px_32px_rgba(138,43,226,0.25)] border border-outline-variant/30 overflow-hidden"
+        className="max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto rounded-2xl bg-surface-container-high/95 backdrop-blur-xl shadow-[0_-4px_32px_rgba(138,43,226,0.35)] border border-outline-variant/30 overflow-hidden"
       >
         {/* Progress strip */}
         <div className="h-0.5 bg-surface-container-highest w-full relative">

@@ -66,10 +66,10 @@ export default function HitsPage() {
     <>
       <Header title="90S Hits" subtitle="Dolby Stereo 90s" />
       <main className="pt-16 pb-36 bg-background min-h-screen">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl md:max-w-4xl lg:max-w-6xl mx-auto">
           {/* Hero capsule */}
           <section className="relative w-full px-4 pt-4 pb-6 overflow-hidden">
-            <div className="relative w-full rounded-xl bg-surface-container-high/70 backdrop-blur-2xl p-space-lg shadow-xl shadow-primary-container/15 overflow-hidden flex flex-col justify-between">
+            <div className="relative w-full rounded-xl bg-surface-container-high/70 backdrop-blur-2xl p-space-lg sm:p-8 shadow-xl shadow-primary-container/15 overflow-hidden flex flex-col justify-between">
               {/* Vinyl decorative */}
               <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full opacity-20 pointer-events-none" style={{ background: 'repeating-radial-gradient(circle at center, #dcb8ff 0px, #dcb8ff 1px, transparent 2px, transparent 6px)' }} />
               <div className="absolute -left-12 -bottom-16 w-48 h-48 rounded-full opacity-15 pointer-events-none" style={{ background: 'radial-gradient(circle at center,#00e3fd,transparent 70%)' }} />
@@ -86,15 +86,15 @@ export default function HitsPage() {
 
               <div className="my-4 z-10 flex flex-col gap-1">
                 <span className="font-mono-space text-label-mono text-tertiary uppercase tracking-widest">Curated Archive • 1990–1999</span>
-                <h1 className="font-playfair text-headline-lg-mobile font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-fixed via-secondary to-tertiary-fixed leading-tight">
+                <h1 className="font-playfair text-headline-lg-mobile md:text-headline-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-fixed via-secondary to-tertiary-fixed leading-tight">
                   THE SOUNDTRACK OF A GENERATION
                 </h1>
-                <p className="font-sans text-body-sm text-on-surface-variant line-clamp-2 mt-1">
+                <p className="font-sans text-body-sm md:text-body-md text-on-surface-variant line-clamp-2 mt-1 max-w-2xl">
                   Relive timeless magnetic nostalgia. 20 digitally restored cinematic anthems, golden duets, and late-night tape cassettes.
                 </p>
               </div>
 
-              <div className="z-10 flex items-center gap-3">
+              <div className="z-10 flex items-center gap-3 sm:max-w-md">
                 <button
                   onClick={() => playSong(SONGS[0], SONGS)}
                   className="flex-1 h-12 rounded-full bg-gradient-to-r from-primary-container to-tertiary-container flex items-center justify-center gap-2 text-on-primary font-sans text-title-md font-semibold shadow-lg shadow-primary-container/40 active:scale-95 transition-all"
@@ -125,9 +125,9 @@ export default function HitsPage() {
               </div>
               <span className="font-mono-space text-label-mono-sm text-on-surface-variant">4 THEMES</span>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+            <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible">
               {VAULTS.map((vault) => (
-                <div key={vault.badge} className="snap-start flex-shrink-0 w-64 rounded-xl bg-surface-container-high/80 p-3 backdrop-blur-xl flex flex-col gap-2 group shadow-md shadow-black/40">
+                <div key={vault.badge} className="snap-start flex-shrink-0 sm:flex-shrink w-64 sm:w-auto rounded-xl bg-surface-container-high/80 p-3 backdrop-blur-xl flex flex-col gap-2 group shadow-md shadow-black/40">
                   <div className="relative w-full h-36 rounded-lg overflow-hidden bg-surface-container-lowest">
                     <img src={vault.src} alt={vault.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/30 to-transparent" />
@@ -174,7 +174,7 @@ export default function HitsPage() {
             </div>
 
             {/* Voice avatar grid */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
               {voices.map((v) => (
                 <div key={v.name} className="flex flex-col items-center gap-1">
                   <div className={`w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr ${v.from} ${v.to}`}>

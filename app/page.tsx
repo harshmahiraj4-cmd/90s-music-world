@@ -13,7 +13,7 @@ export default function HomePage() {
     <>
       <Header title="Home" subtitle="Dolby Stereo 90s" />
       <main className="flex-1 flex flex-col relative w-full pt-16 pb-36 bg-background">
-        <div className="flex flex-col w-full select-none pb-12 max-w-2xl mx-auto w-full">
+        <div className="flex flex-col w-full select-none pb-12 max-w-2xl md:max-w-4xl lg:max-w-6xl mx-auto w-full">
           <HeroSection />
           <TrendingCard />
           <TimeMachine />

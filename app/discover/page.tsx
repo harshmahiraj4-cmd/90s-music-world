@@ -42,7 +42,7 @@ export default function DiscoverPage() {
     <>
       <Header title="Discover" subtitle="Dolby Stereo 90s" />
       <main className="pt-16 pb-36 bg-background min-h-screen">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl md:max-w-4xl lg:max-w-6xl mx-auto">
           {/* Search console */}
           <section className="px-4 pt-4">
             <div className="relative w-full rounded-xl bg-surface-container-high/90 backdrop-blur-xl shadow-xl overflow-hidden p-3 flex flex-col gap-3">

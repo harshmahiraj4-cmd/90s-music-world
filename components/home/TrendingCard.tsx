@@ -29,11 +29,11 @@ export default function TrendingCard() {
         <span className="font-mono-space text-[10px] text-secondary-container">#1 AIRPLAY</span>
       </div>
 
-      <div className="relative bg-surface-container rounded-xl p-4 shadow-xl overflow-hidden">
+      <div className="relative bg-surface-container rounded-xl p-4 sm:p-5 shadow-xl overflow-hidden">
         <div className="absolute -right-16 -top-16 w-44 h-44 rounded-full bg-primary-container/20 blur-2xl pointer-events-none" />
         <div className="flex gap-4 items-center">
           {/* Album art */}
-          <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden shadow-lg bg-surface-container-highest">
+          <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-lg overflow-hidden shadow-lg bg-surface-container-highest">
             <img src={TRENDING.coverSrc} alt={TRENDING.title} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 via-transparent to-transparent" />
             <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-surface-container-lowest/90 text-secondary font-mono-space text-[10px]">

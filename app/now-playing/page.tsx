@@ -84,121 +84,144 @@ export default function NowPlayingScreen() {
         </div>
       </div>
 
-      {/* Main deck */}
-      <div className="relative z-10 w-full max-w-sm mx-auto px-4 my-2 flex flex-col items-center justify-center min-h-[330px]">
-        {/* Ambient halos */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-64 h-64 rounded-full bg-primary-container/25 blur-3xl mix-blend-screen animate-pulse" />
-          <div className="w-56 h-56 rounded-full bg-secondary-fixed-dim/20 blur-2xl mix-blend-screen ml-8" />
-        </div>
-
-        {deckMode === 'vinyl' ? (
-          <VinylDisc
-            coverSrc={currentSong.coverSrc}
-            label={currentSong.title}
-            filmLabel={currentSong.filmLabel}
-            playing={isPlaying}
-          />
-        ) : (
-          <CassetteDeck title={currentSong.title} playing={isPlaying} />
-        )}
-      </div>
-
-      {/* Song metadata */}
-      <div className="relative z-10 w-full px-4 mt-2 flex items-start justify-between">
-        <div className="flex flex-col min-w-0 pr-3">
-          <div className="flex items-center gap-2">
-            <h2 className="font-playfair text-headline-lg-mobile text-on-surface font-semibold tracking-tight truncate">
-              {currentSong.title}
-            </h2>
-            <span className="px-1.5 py-0.5 rounded bg-primary-container/30 text-primary-fixed-dim font-mono-space text-[9px] uppercase font-bold tracking-wider flex-shrink-0">
-              Hi-Fi
-            </span>
-          </div>
-          <p className="font-sans text-body-lg text-on-surface-variant truncate mt-0.5">{currentSong.artist}</p>
-          <div className="flex items-center gap-2 mt-1 text-on-surface-variant">
-            <span className="font-sans text-body-sm text-secondary-fixed">{currentSong.album}</span>
-            <span className="text-[10px]">•</span>
-            <span className="font-mono-space text-[11px]">{currentSong.composer}</span>
-          </div>
-        </div>
-        <FavoriteButton songId={currentSong.id} size="lg" />
-      </div>
-
-      {/* Lyrics teaser */}
-      <div className="relative z-10 w-full px-4 my-3">
-        <div className="w-full p-3 rounded-xl bg-surface-container-low/90 backdrop-blur-md flex items-center justify-between gap-3 shadow-sm cursor-pointer hover:bg-surface-container transition-colors">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-primary-container/40 flex items-center justify-center text-primary flex-shrink-0">
-              <span className="material-symbols-outlined text-[16px]">format_quote</span>
+      {/* Main content grid: 1 col on mobile, 2 cols on desktop/tablet */}
+      <div className="relative z-10 w-full max-w-md md:max-w-5xl mx-auto px-4 my-auto md:grid md:grid-cols-2 md:gap-10 md:items-center">
+        {/* Left Column: Deck & Mode Switch */}
+        <div className="flex flex-col items-center justify-center">
+          <div className="relative w-full max-w-sm mx-auto my-2 flex flex-col items-center justify-center min-h-[300px] sm:min-h-[330px]">
+            {/* Ambient halos */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-64 h-64 rounded-full bg-primary-container/25 blur-3xl mix-blend-screen animate-pulse" />
+              <div className="w-56 h-56 rounded-full bg-secondary-fixed-dim/20 blur-2xl mix-blend-screen ml-8" />
             </div>
-            <p className="font-sans text-body-md text-primary italic truncate">
-              {currentSong.lyrics}
-            </p>
+
+            {deckMode === 'vinyl' ? (
+              <VinylDisc
+                coverSrc={currentSong.coverSrc}
+                label={currentSong.title}
+                filmLabel={currentSong.filmLabel}
+                playing={isPlaying}
+              />
+            ) : (
+              <CassetteDeck title={currentSong.title} playing={isPlaying} />
+            )}
           </div>
-          <div className="flex items-center gap-1 text-secondary-fixed flex-shrink-0">
-            <span className="font-mono-space text-[10px] uppercase">Lyrics</span>
-            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          </div>
-        </div>
-      </div>
 
-      {/* Audio Visualizer */}
-      <div className="relative z-10 w-full px-4 mb-3">
-        <AudioVisualizer />
-      </div>
-
-      {/* Progress bar */}
-      <div className="relative z-10 w-full px-4 mb-3">
-        <ProgressBar onSeek={handleSeek} />
-      </div>
-
-      {/* Transport controls */}
-      <div className="relative z-10 w-full px-2 my-2">
-        <TransportControls />
-      </div>
-
-      {/* Bottom hardware rack */}
-      <div className="relative z-10 w-full px-4 mt-3 pb-24">
-        <div className="w-full p-3 rounded-2xl bg-surface-container-low/95 backdrop-blur-xl shadow-xl flex flex-col gap-3">
-          {/* Deck mode toggle */}
-          <div className="flex items-center justify-between">
+          {/* Quick Deck Switcher under deck */}
+          <div className="hidden md:flex items-center justify-center gap-3 mt-4">
             <button
               onClick={toggleDeckMode}
-              className="px-3 py-1.5 rounded-full bg-surface-container-high hover:bg-surface-bright flex items-center gap-1.5 transition-all text-on-surface active:scale-95"
+              className="px-4 py-2 rounded-full bg-surface-container-high hover:bg-surface-bright flex items-center gap-2 transition-all text-on-surface active:scale-95 shadow-md"
             >
               <span className="material-symbols-outlined text-[18px] text-secondary">
                 {deckMode === 'vinyl' ? 'mobile_share_stack' : 'album'}
               </span>
-              <span className="font-mono-space text-[10px] text-secondary-fixed uppercase tracking-wider">
+              <span className="font-mono-space text-[11px] text-secondary-fixed uppercase tracking-wider">
                 Switch to {deckMode === 'vinyl' ? 'Tape Deck' : 'Turntable'}
               </span>
             </button>
-            <div className="flex items-center gap-1.5">
-              <button className="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-mono-space text-[11px] hover:text-primary flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">tune</span>
-                WARM TUBE EQ
-              </button>
+          </div>
+        </div>
+
+        {/* Right Column: Metadata, Lyrics, Visualizer, Progress, Transport Controls, Hardware */}
+        <div className="flex flex-col w-full">
+          {/* Song metadata */}
+          <div className="w-full px-2 mt-2 flex items-start justify-between">
+            <div className="flex flex-col min-w-0 pr-3">
+              <div className="flex items-center gap-2">
+                <h2 className="font-playfair text-headline-lg-mobile md:text-headline-lg text-on-surface font-semibold tracking-tight truncate">
+                  {currentSong.title}
+                </h2>
+                <span className="px-1.5 py-0.5 rounded bg-primary-container/30 text-primary-fixed-dim font-mono-space text-[9px] uppercase font-bold tracking-wider flex-shrink-0">
+                  Hi-Fi
+                </span>
+              </div>
+              <p className="font-sans text-body-lg text-on-surface-variant truncate mt-0.5">{currentSong.artist}</p>
+              <div className="flex items-center gap-2 mt-1 text-on-surface-variant">
+                <span className="font-sans text-body-sm text-secondary-fixed">{currentSong.album}</span>
+                <span className="text-[10px]">•</span>
+                <span className="font-mono-space text-[11px]">{currentSong.composer}</span>
+              </div>
+            </div>
+            <FavoriteButton songId={currentSong.id} size="lg" />
+          </div>
+
+          {/* Lyrics teaser */}
+          <div className="w-full px-2 my-2.5">
+            <div className="w-full p-3 rounded-xl bg-surface-container-low/90 backdrop-blur-md flex items-center justify-between gap-3 shadow-sm cursor-pointer hover:bg-surface-container transition-colors">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-primary-container/40 flex items-center justify-center text-primary flex-shrink-0">
+                  <span className="material-symbols-outlined text-[16px]">format_quote</span>
+                </div>
+                <p className="font-sans text-body-md text-primary italic truncate">
+                  {currentSong.lyrics}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-secondary-fixed flex-shrink-0">
+                <span className="font-mono-space text-[10px] uppercase">Lyrics</span>
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              </div>
             </div>
           </div>
 
-          {/* Volume */}
-          <VolumeControl />
+          {/* Audio Visualizer */}
+          <div className="w-full px-2 mb-2.5">
+            <AudioVisualizer />
+          </div>
 
-          {/* Quick actions */}
-          <div className="flex items-center justify-between pt-1 text-on-surface-variant font-mono-space text-[10px]">
-            <div className="flex items-center gap-1 text-secondary-fixed">
-              <span className="material-symbols-outlined text-[16px]">spatial_audio_off</span>
-              <span>Nostalgia Tube 3D</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="hover:text-primary transition-colors flex items-center gap-1" aria-label="Audio output">
-                <span className="material-symbols-outlined text-[18px]">devices</span>
-                <span className="text-[10px]">Studio Mon</span>
-              </button>
-              <button className="hover:text-tertiary transition-colors" aria-label="Track info">
-                <span className="material-symbols-outlined text-[18px]">info</span>
-              </button>
+          {/* Progress bar */}
+          <div className="w-full px-2 mb-2">
+            <ProgressBar onSeek={handleSeek} />
+          </div>
+
+          {/* Transport controls */}
+          <div className="w-full px-1 my-1">
+            <TransportControls />
+          </div>
+
+          {/* Bottom hardware rack */}
+          <div className="w-full px-2 mt-2 pb-16 md:pb-4">
+            <div className="w-full p-3 rounded-2xl bg-surface-container-low/95 backdrop-blur-xl shadow-xl flex flex-col gap-3">
+              {/* Deck mode toggle (mobile only) */}
+              <div className="flex items-center justify-between md:hidden">
+                <button
+                  onClick={toggleDeckMode}
+                  className="px-3 py-1.5 rounded-full bg-surface-container-high hover:bg-surface-bright flex items-center gap-1.5 transition-all text-on-surface active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-secondary">
+                    {deckMode === 'vinyl' ? 'mobile_share_stack' : 'album'}
+                  </span>
+                  <span className="font-mono-space text-[10px] text-secondary-fixed uppercase tracking-wider">
+                    Switch to {deckMode === 'vinyl' ? 'Tape Deck' : 'Turntable'}
+                  </span>
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <button className="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-mono-space text-[11px] hover:text-primary flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">tune</span>
+                    WARM TUBE EQ
+                  </button>
+                </div>
+              </div>
+
+              {/* Volume */}
+              <VolumeControl />
+
+              {/* Quick actions */}
+              <div className="flex items-center justify-between pt-1 text-on-surface-variant font-mono-space text-[10px]">
+                <div className="flex items-center gap-1 text-secondary-fixed">
+                  <span className="material-symbols-outlined text-[16px]">spatial_audio_off</span>
+                  <span>Nostalgia Tube 3D</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button className="hover:text-primary transition-colors flex items-center gap-1" aria-label="Audio output">
+                    <span className="material-symbols-outlined text-[18px]">devices</span>
+                    <span className="text-[10px]">Studio Mon</span>
+                  </button>
+                  <button className="hover:text-tertiary transition-colors" aria-label="Track info">
+                    <span className="material-symbols-outlined text-[18px]">info</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
