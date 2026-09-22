@@ -26,6 +26,7 @@ export function getAudioContext(): AudioContext | null {
 export function getOrCreateAudioElement(): HTMLAudioElement | null {
   if (typeof window === 'undefined') return null;
   if (!audioEl) {
+    console.log('[AudioEngine] Creating HTMLAudioElement singleton');
     audioEl = new Audio();
     audioEl.preload = 'metadata';
   }
@@ -47,10 +48,9 @@ export function initAudioEngine(el: HTMLAudioElement) {
     analyser.smoothingTimeConstant = 0.8;
     sourceNode.connect(analyser);
     analyser.connect(ctx.destination);
+    console.log('[AudioEngine] Web Audio API analyzer connected');
   } catch (err) {
-    // If Web Audio routing is restricted or fails (e.g. CORS on audio element),
-    // let HTML5 audio play directly to output rather than failing silently
-    console.warn('AudioAnalyser init skipped, falling back to direct audio output:', err);
+    console.warn('[AudioEngine] Web Audio API analyzer skipped, direct audio output active:', err);
   }
 }
 
@@ -89,7 +89,9 @@ export function useAudioEngine() {
   const repeatModeRef = useRef(repeatMode);
   repeatModeRef.current = repeatMode;
 
-  // Initialize HTML5 Audio Element and its Event Listeners once
+  const lastLoadedSrcRef = useRef<string>('');
+
+  // 1. Initialize HTML5 Audio Element & Event Listeners once
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const el = getOrCreateAudioElement();
@@ -97,9 +99,11 @@ export function useAudioEngine() {
 
     if (!listenersAttached) {
       listenersAttached = true;
+      console.log('[AudioEngine] Attaching HTML5 audio event listeners');
 
       // 1. loadedmetadata
       const handleLoadedMetadata = () => {
+        console.log('[AudioEngine Event] loadedmetadata fired. Duration:', el.duration);
         if (el.duration && !isNaN(el.duration)) {
           setDuration(el.duration);
         }
@@ -107,34 +111,29 @@ export function useAudioEngine() {
 
       // 2. canplay
       const handleCanPlay = () => {
-        const state = useMusicStore.getState();
-        if (state.isPlaying && el.paused) {
-          el.play().catch((err: DOMException) => {
-            if (err.name !== 'AbortError') {
-              console.error(
-                `AUDIO LOAD ERROR\nSong Title: ${currentSongRef.current?.title || 'Unknown'}\nAudio URL: ${el.src}\nBrowser Error: ${err.name} - ${err.message}`
-              );
-              setIsPlaying(false);
-            }
-          });
-        }
+        console.log('[AudioEngine Event] canplay fired. ReadyState:', el.readyState);
       };
 
       // 3. play
       const handlePlay = () => {
+        console.log('[AudioEngine Event] play fired');
         setIsPlaying(true);
       };
 
       // 4. pause
       const handlePause = () => {
+        console.log('[AudioEngine Event] pause fired');
         setIsPlaying(false);
       };
 
       // 5. ended
       const handleEnded = () => {
+        console.log('[AudioEngine Event] ended fired. RepeatMode:', repeatModeRef.current);
         if (repeatModeRef.current === 'one') {
           el.currentTime = 0;
-          el.play().catch(() => {});
+          el.play().catch((err) => {
+            console.error('[AudioEngine] Repeat play rejected:', err);
+          });
         } else {
           next();
         }
@@ -151,7 +150,7 @@ export function useAudioEngine() {
           errorCode = err.code;
           switch (err.code) {
             case MediaError.MEDIA_ERR_ABORTED:
-              errorName = 'MEDIA_ERR_ABORTED (User aborted audio playback)';
+              errorName = 'MEDIA_ERR_ABORTED (Playback aborted by user)';
               break;
             case MediaError.MEDIA_ERR_NETWORK:
               errorName = 'MEDIA_ERR_NETWORK (Network error downloading audio)';
@@ -191,74 +190,67 @@ export function useAudioEngine() {
     }
   }, [setDuration, setIsPlaying, setProgress, next]);
 
-  // Handle song source changes
+  // 2. Coordinated Audio Execution Flow:
+  // Updates src -> calls load() -> calls play() or pause()
   useEffect(() => {
     const el = getOrCreateAudioElement();
     if (!el || !currentSong) return;
 
     const rawSrc = currentSong.audioSrc;
-    // Normalize path to absolute URL for accurate comparison
     const resolvedSrc = new URL(rawSrc, window.location.href).href;
+    const isNewSong = lastLoadedSrcRef.current !== resolvedSrc;
 
-    if (el.src !== resolvedSrc) {
+    if (isNewSong) {
+      lastLoadedSrcRef.current = resolvedSrc;
+      console.log(`[AudioEngine] 1. Setting audio.src = ${rawSrc}`);
       el.src = rawSrc;
+
+      console.log('[AudioEngine] 2. Calling audio.load()');
       el.load();
 
-      // Initialize Web Audio API node on first play
+      // Ensure Web Audio analyser is attached
       initAudioEngine(el);
       const ctx = getAudioContext();
       if (ctx && ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }
-
-      if (isPlaying) {
-        const playPromise = el.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((err: DOMException) => {
-            if (err.name !== 'AbortError') {
-              console.error(
-                `AUDIO LOAD ERROR\nSong Title: ${currentSong.title}\nAudio URL: ${el.src}\nBrowser Error: ${err.name} - ${err.message}`
-              );
-              setIsPlaying(false);
-            }
-          });
-        }
-      }
     }
-  }, [currentSong, isPlaying, setIsPlaying]);
 
-  // Handle Play / Pause commands
-  useEffect(() => {
-    const el = getOrCreateAudioElement();
-    if (!el || !currentSong) return;
-
+    // Playback state control
     if (isPlaying) {
       const ctx = getAudioContext();
       if (ctx && ctx.state === 'suspended') {
         ctx.resume().catch(() => {});
       }
 
-      if (el.paused) {
-        const playPromise = el.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((err: DOMException) => {
-            if (err.name !== 'AbortError') {
-              console.error(
-                `AUDIO LOAD ERROR\nSong Title: ${currentSong.title}\nAudio URL: ${el.src}\nBrowser Error: ${err.name} - ${err.message}`
-              );
-              setIsPlaying(false);
+      console.log('[AudioEngine] 3. Calling audio.play() for:', currentSong.title);
+      const playPromise = el.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('[AudioEngine] audio.play() Promise RESOLVED successfully');
+          })
+          .catch((err: DOMException) => {
+            if (err.name === 'AbortError') {
+              console.log('[AudioEngine] play() aborted by subsequent load request (skipping)');
+              return;
             }
+            console.error(
+              `AUDIO LOAD ERROR\nSong Title: ${currentSong.title}\nAudio URL: ${el.src}\nBrowser Error/Code: ${err.name} - ${err.message}`
+            );
+            setIsPlaying(false);
           });
-        }
       }
     } else {
       if (!el.paused) {
+        console.log('[AudioEngine] Calling audio.pause() for:', currentSong.title);
         el.pause();
       }
     }
-  }, [isPlaying, currentSong, setIsPlaying]);
+  }, [currentSong, isPlaying, setIsPlaying]);
 
-  // Handle Volume & Mute
+  // 3. Volume and Mute control
   useEffect(() => {
     const el = getOrCreateAudioElement();
     if (!el) return;
